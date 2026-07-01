@@ -3,47 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GymBuddy</title>
+    <title>Evolv Fitness Langata - GymBuddy</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <div class="top-bar">
+        <span>📍 Langata Rd, Nairobi</span>
+        <span>📞 +254 700 000 000</span> <span>✉️ info@evolvfitness.co.ke</span>
+    </div>
+
+    <nav class="main-nav">
+        <div class="logo">Evolv Fitness</div>
+        <div class="nav-links">
+            <a href="#">Home</a>
+            <a href="#timetable">Schedule</a>
+            <a href="#tools">GymBuddy</a>
+        </div>
+        </nav>
+
+    <section class="hero">
+        <div class="hero-content">
+            <h1>Welcome to Evolv Fitness Langata</h1>
+            <p>Track, load, and conquer your weekly sessions.</p>
+        </div>
+    </section>
 
     <div class="app-container">
-        <header>
-            <h1>GymBuddy</h1>
-            <p>Your Personal Barbell Assistant</p>
-        </header>
+        
+        <section id="timetable" class="routine-grid">
+            <h2 class="section-title">Schedule</h2>
+            
+            <div class="day-selector" id="daySelector"></div>
 
-        <main class="calculator-card">
-            <h2>Barbell Loader</h2>
+            <div class="day-card" id="workoutContainer">
+                <h3 id="currentDayTitle">Monday</h3>
+                <ul id="workoutList" class="editable-list"></ul>
+                
+                <div class="add-workout">
+                    <input type="text" id="newWorkoutInput" placeholder="Add exercise...">
+                    <button id="addWorkoutBtn">Add</button>
+                </div>
+            </div>
+        </section>
+
+        <main id="tools" class="calculator-card">
+            <h2>Barbell Calculator</h2>
+            
             <div class="input-group">
-                <input type="number" id="targetWeight" placeholder="Enter weight (e.g., 160)" min="20">
-                <button id="calcBtn">Calculate</button>
+                <input type="number" id="targetWeight" placeholder="Total weight (kg)" min="20" max="500">
+                <button id="calcBtn">Load Bar</button>
             </div>
 
             <div class="barbell-container">
                 <div class="barbell-shaft"></div>
-                <div id="plateDisplay" class="plates-wrapper">
-                    </div>
+                <div id="plateDisplay" class="plates-wrapper"></div>
             </div>
             
-            <p id="textFeedback" class="feedback-text">Enter weight to view plate breakdown on the bar.</p>
+            <p id="textFeedback" class="feedback-text">Enter weight above to see plates.</p>
         </main>
-
-        <section class="routine-grid">
-            <div class="day-card">
-                <h3>Push Day</h3>
-                <label><input type="checkbox" class="task-check"> Seated Machine Chest Press</label>
-                <label><input type="checkbox" class="task-check"> Incline Dumbbell Press</label>
-                <label><input type="checkbox" class="task-check"> Tricep Pushdowns</label>
-            </div>
-            <div class="day-card">
-                <h3>Pull Day</h3>
-                <label><input type="checkbox" class="task-check"> Deadlift (Target: 160kg)</label>
-                <label><input type="checkbox" class="task-check"> Lat Pulldowns</label>
-                <label><input type="checkbox" class="task-check"> Bicep Curls</label>
-            </div>
-        </section>
     </div>
 
     <script src="script.js"></script>
