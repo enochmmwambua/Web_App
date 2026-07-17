@@ -3,65 +3,198 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Evolv Fitness Langata - GymBuddy</title>
+    <title>Evolv Fitness Langata - Premium Training Facility</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    
     <div class="top-bar">
         <span>📍 Langata Rd, Nairobi</span>
-        <span>📞 +254 700 000 000</span> <span>✉️ info@evolvfitness.co.ke</span>
+        <span>📞 +254 700 000 000</span> 
+        <span>✉️ info@evolvfitness.co.ke</span>
     </div>
 
     <nav class="main-nav">
         <div class="logo">Evolv Fitness</div>
         <div class="nav-links">
             <a href="#">Home</a>
-            <a href="#timetable">Schedule</a>
-            <a href="#tools">GymBuddy</a>
+            <a href="#about">Facility</a>
+            <a href="#trainers">Trainers</a>
+            <a href="#memberships">Pricing</a>
+            <a href="signup.html" class="cta-btn">Join Now</a>
         </div>
-        </nav>
+    </nav>
 
     <section class="hero">
         <div class="hero-content">
             <h1>Welcome to Evolv Fitness Langata</h1>
-            <p>Track, load, and conquer your weekly sessions.</p>
+            <p>Nairobi's premier strength and conditioning facility. Track, load, and conquer.</p>
+            <div class="hero-actions">
+                <a href="signup.html" class="cta-btn hero-btn">Start Your Journey</a>
+                <a href="#tools" class="outline-btn">Explore GymBuddy App</a>
+            </div>
         </div>
     </section>
 
-    <div class="app-container">
-        
-        <section id="timetable" class="routine-grid">
-            <h2 class="section-title">Schedule</h2>
-            
-            <div class="day-selector" id="daySelector"></div>
+    <section id="about" class="business-band light-band">
+        <div class="container dual-column">
+            <div class="text-col">
+                <h2 class="section-title left-align">Elevate Your Standard.</h2>
+                <p>Located conveniently along Langata Road, just minutes from Wilson Airport and Strathmore University, Evolv Fitness is built for those serious about their progress.</p>
+                <p>We combine elite equipment with our proprietary digital tracking tools to ensure every session pushes you closer to your goals.</p>
+            </div>
+            <div class="amenity-grid">
+                <div class="amenity"><span class="icon">🏋️‍♂️</span><h4>Olympic Plates</h4></div>
+                <div class="amenity"><span class="icon">🚿</span><h4>Premium Showers</h4></div>
+                <div class="amenity"><span class="icon">🚗</span><h4>Secure Parking</h4></div>
+                <div class="amenity"><span class="icon">📶</span><h4>Free Fast WiFi</h4></div>
+            </div>
+        </div>
+    </section>
 
-            <div class="day-card" id="workoutContainer">
-                <h3 id="currentDayTitle">Monday</h3>
-                <ul id="workoutList" class="editable-list"></ul>
+    <section id="trainers" class="business-band dark-band">
+        <h2 class="section-title">Meet Your Coaches</h2>
+        <p class="section-subtitle">Expert guidance for every lifting style.</p>
+        
+        <div class="container trainer-grid"><!-- Get images for the trainers -->
+            <div class="trainer-card">
+                <div class="trainer-img placeholder-1"></div>
+                <h3>Coach Marcus</h3>
+                <p class="specialty">Strength & Powerlifting</p>
+                <p>From optimizing your seated machine chest press to coaching you past a 160kg deadlift plateau, Marcus builds raw strength.</p>
+            </div>
+            <div class="trainer-card">
+                <div class="trainer-img placeholder-2"></div>
+                <h3>Coach Sarah</h3>
+                <p class="specialty">HIIT & Conditioning</p>
+                <p>Specializes in high-intensity functional training designed to shred fat and build elite cardiovascular endurance.</p>
+            </div>
+            <div class="trainer-card">
+                <div class="trainer-img placeholder-3"></div>
+                <h3>Coach David</h3>
+                <p class="specialty">Hypertrophy & Aesthetics</p>
+                <p>Focuses on precise muscle isolation, bodybuilding splits, and nutritional programming for maximum growth.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="tools" class="business-band highlight-band">
+        <div class="container feature-intro">
+            <h2 class="section-title">GymBuddy</h2>
+            <p>Every membership includes free access to our proprietary in-house web app. Plan your splits and calculate your barbell loads on the fly.</p>
+        </div>
+
+        <div class="app-container">
+            <section id="timetable" class="routine-grid">
+                <div class="day-selector" id="daySelector"></div>
+                <div class="day-card" id="workoutContainer">
+                    <h3 id="currentDayTitle">Monday</h3>    
+                    <ul id="workoutList" class="editable-list"></ul>
+                    <div class="add-workout">
+                        <input type="text" id="newWorkoutInput" placeholder="Add exercise...">
+                        <button id="addWorkoutBtn">Add</button>
+                    </div>
+                </div>
+            </section>
+
+            <main class="calculator-card">
+                <div class="input-group">
+                    <input type="number" id="targetWeight" placeholder="Total weight (kg)" min="20" max="500">
+                    <button id="calcBtn">Load Bar</button>
+                </div>
+                <div class="barbell-container">
+                    <div class="barbell-shaft"></div>
+                    <div id="plateDisplay" class="plates-wrapper"></div>
+                </div>
+                <p id="textFeedback" class="feedback-text">Enter weight above to see plates (Please note that the bar is a standard 20 Kgs that is included in claculations).</p>
+            </main>
+        </div>
+    </section>
+
+    <section class="business-band light-band">
+        <h2 class="section-title">Success Stories</h2>
+        <p class="section-subtitle">Real results from the Evolv community.</p>
+        
+        <div class="carousel-wrapper">
+            <button class="carousel-btn prev-btn">❮</button>
+
+            <div class="carousel-track-container">
+                <ul class="carousel-track">
+                    <li class="carousel-slide">
+                        <div class="testimonial">
+                            <p>"The GymBuddy app feature is a gamechanger. I don't need to carry a notebook anymore, and I finally hit my 160kg deadlift target thanks to Coach Marcus."</p>
+                            <h4>- James K.</h4>
+                        </div>
+                    </li>
+                    <li class="carousel-slide">
+                        <div class="testimonial">
+                            <p>"Best facility near Strathmore hands down. The coaches actually know what they're doing, the vibe is unmatched, and it's perfect for training between classes."</p>
+                            <h4>- Michelle W.</h4>
+                        </div>
+                    </li>
+                    <li class="carousel-slide">
+                        <div class="testimonial">
+                            <p>"Coach Sarah's HIIT sessions completely transformed my conditioning. Switched from my old gym in South C and I'm never looking back. The premium showers are a massive plus too!"</p>
+                            <h4>- Anita M.</h4>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+            
+            <button class="carousel-btn next-btn">❯</button>
+        </div>
+    </section>
+
+    <section id="memberships" class="business-band dark-band pricing-section">
+        <h2 class="section-title">Memberships</h2>
+        <div class="pricing-grid container">
+            <div class="price-card">
+                <h3>Daily Drop-In</h3>
+                <div class="price">500 KES</div>
+                <p>Full facility access for 24 hours.</p>
+            </div>
+            <div class="price-card popular">
+                <h3>Monthly Standard</h3>
+                <div class="price">5,000 KES</div>
+                <p>Unlimited access + GymBuddy App.</p>
+                <a href="signup.html" class="cta-btn full-width" style="margin-top: 15px; display: inline-block;">Select Plan</a>
+            </div>
+            <div class="price-card">
+                <h3>Student</h3>
+                <div class="price">4,500 KES</div>
+                <p>Valid university ID required.</p>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <div class="container footer-grid">
+          <div class="footer-col">
+                <h3>Evolv Fitness Langata</h3>
+                <p>Nairobi's elite training ground.</p>
                 
-                <div class="add-workout">
-                    <input type="text" id="newWorkoutInput" placeholder="Add exercise...">
-                    <button id="addWorkoutBtn">Add</button>
+                <!--Google Maps Pin at footer-->
+                <div class="map-box" style="margin-top: 15px;">
+                    <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3988.7445267995386!2d36.812702099999996!3d-13293251!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f131!3m3!1m2!1s0x182f1039be4f6e23%3A0xd05a7554da08f353!2sEvolve%20Fitness%20Gym!5e0!3m2!1sen!2ske!4v1784295955091!5m2!1sen!2ske" width="100%" height="200" style="border-radius: 8px;" allowfullscreen="" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>
                 </div>
             </div>
-        </section>
 
-        <main id="tools" class="calculator-card">
-            <h2>Barbell Calculator</h2>
-            
-            <div class="input-group">
-                <input type="number" id="targetWeight" placeholder="Total weight (kg)" min="20" max="500">
-                <button id="calcBtn">Load Bar</button>
+            <div class="footer-col">
+                <h3>Hours</h3>
+                <p>Mon-Fri: 6:00 AM - 8:00 PM</p>
+                <p>Sat: 7:00 AM - 6:00 PM</p>
+                <p>Sun: 8:00 AM - 4:00 PM</p>
             </div>
-
-            <div class="barbell-container">
-                <div class="barbell-shaft"></div>
-                <div id="plateDisplay" class="plates-wrapper"></div>
+            <div class="footer-col">
+                <h3>Contact</h3>
+                <p>📞 +254 700 000 000</p>
+                <p>✉️ info@evolvfitness.co.ke</p>
             </div>
-            
-            <p id="textFeedback" class="feedback-text">Enter weight above to see plates.</p>
-        </main>
-    </div>
+        </div>
+        <div class="footer-bottom">
+            <p>© 2026 Evolv Fitness | GymBuddy Application</p>
+        </div>
+    </footer>
 
     <script src="script.js"></script>
 </body>

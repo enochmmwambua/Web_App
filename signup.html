@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Join Evolv Fitness Langata</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="auth-body">
+    
+    <!-- Minimal nav just to get back home -->
+    <nav class="main-nav auth-nav">
+        <div class="logo">Evolv Fitness</div>
+        <div class="nav-links">
+            <a href="index.html">← Back to Home</a>
+        </div>
+    </nav>
+
+    <div class="auth-container">
+        <div class="auth-card">
+            <h2>Claim Your Membership</h2>
+            <p>Start tracking, loading, and conquering today.</p>
+            
+            <form id="signupForm" class="auth-form">
+                <div class="input-group">
+                    <input type="text" id="fullName" placeholder="Full Name" required>
+                </div>
+                <div class="input-group">
+                    <input type="email" id="email" placeholder="Email Address" required>
+                </div>
+                <div class="input-group">
+                    <input type="tel" id="phone" placeholder="Phone Number (e.g. 0700...)">
+                </div>
+                
+                <!-- Let them pick the tier we built earlier -->
+                <div class="input-group">
+                    <select id="membershipTier" required>
+                        <option value="" disabled selected>Select Membership Tier...</option>
+                        <option value="student">Student (4,500 KES)</option>
+                        <option value="standard">Monthly Standard (5,000 KES)</option>
+                        <option value="dropin">Daily Drop-in (500 KES)</option>
+                    </select>
+                </div>
+
+                <div class="input-group">
+                    <input type="password" id="password" placeholder="Create Password" required>
+                </div>
+
+                <button type="submit" class="cta-btn full-width">Complete Signup</button>
+            </form>
+
+        </div>
+    </div>
+</body>
+</html>
