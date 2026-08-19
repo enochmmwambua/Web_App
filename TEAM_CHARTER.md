@@ -37,5 +37,5 @@ RETURN barbell plate distribution.
 
 
 RING POSITION
--> Upstream Team:
--> Downstream Team:
+-> Upstream Team: Group 8
+-> Downstream Team: Group 10
