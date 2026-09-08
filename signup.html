@@ -51,5 +51,39 @@
 
         </div>
     </div>
+    
+<!-- Signup Form Logic -->
+    <script>
+        document.getElementById('signupForm').addEventListener('submit', async (e) => {
+            e.preventDefault(); // Prevents the page from reloading
+            
+            const userData = {
+                fullName: document.getElementById('fullName').value,
+                email: document.getElementById('email').value,
+                phone: document.getElementById('phone').value,
+                tier: document.getElementById('membershipTier').value,
+                password: document.getElementById('password').value
+            };
+
+            try {
+                const response = await fetch('http://localhost:5000/api/users', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(userData)
+                });
+
+                if (response.ok) {
+                    alert('Welcome to Evolve Fitness! Your membership is confirmed.');
+                    window.location.href = 'index.html'; // Send them back to the main app
+                } else {
+                    const errorData = await response.json();
+                    alert(`Error: ${errorData.error}`); // Will trigger if email already exists
+                }
+            } catch (err) {
+                console.error('Network error:', err);
+                alert('Failed to connect to the server.');
+            }
+        });
+    </script>
 </body>
 </html>

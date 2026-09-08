@@ -1,23 +1,8 @@
-/* Workouts and Innit */
-const defaultWorkouts = {
-    Monday: ["Seated Machine Chest Press", "Incline DB Press", "Tricep Pushdowns"],
-    Tuesday: ["Deadlift (Target: 160kg)", "Lat Pulldowns", "Bicep Curls"],
-    Wednesday: ["Rest"],
-    Thursday: ["Squats", "Leg Press", "Shoulder Press"],
-    Friday: ["Strict Pull-ups", "Barbell Rows", "Face Pulls"],
-    Saturday: ["Cardio / Core"],
-    Sunday: ["Rest"]
-};
-
-let workouts = JSON.parse(localStorage.getItem('gymBuddyWorkouts')) || defaultWorkouts;
-
-function saveToMemory() {
-    localStorage.setItem('gymBuddyWorkouts', JSON.stringify(workouts));
-}
+/* Workouts and Database Connection */
+let workoutsDB = []; // Will hold data fetched from Express
 
 const jsDays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 let activeDay = jsDays[new Date().getDay()];
-
 const uiDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 const daySelector = document.getElementById("daySelector");
@@ -25,17 +10,26 @@ const workoutList = document.getElementById("workoutList");
 const addBtn = document.getElementById("addWorkoutBtn");
 const workoutInput = document.getElementById("newWorkoutInput");
 
+// SELECT: Fetch data from database on load
+async function fetchWorkouts() {
+    try {
+        const res = await fetch('http://localhost:5000/api/workouts');
+        workoutsDB = await res.json();
+        render();
+    } catch (err) {
+        console.error("Failed to fetch workouts from DB:", err);
+    }
+}
+
 function init() {
     uiDays.forEach(day => {
         const btn = document.createElement("button");
         btn.innerText = day.slice(0, 3);
         btn.onclick = () => setDay(day);
-        
         if (day === activeDay) btn.classList.add("active");
-        
         daySelector.appendChild(btn);
     });
-    render();
+    fetchWorkouts(); // Replaces localStorage load
 }
 
 function setDay(day) {
@@ -49,30 +43,69 @@ function setDay(day) {
 
 function render() {
     workoutList.innerHTML = ""; 
-    workouts[activeDay].forEach((ex, i) => {
+    // Filter the flat database array for the current day
+    const todaysWorkouts = workoutsDB.filter(w => w.day === activeDay);
+
+    todaysWorkouts.forEach((ex) => {
         const li = document.createElement("li");
         li.innerHTML = `
-            <span><input type="checkbox" class="task-check" style="margin-right: 10px;"> ${ex}</span>
-            <button class="delete-btn" onclick="removeEx(${i})">X</button>
+            <span>
+                <input type="checkbox" class="task-check" style="margin-right: 10px;" 
+                ${ex.is_completed ? 'checked' : ''} 
+                onchange="toggleComplete(${ex.id}, this.checked)"> 
+                ${ex.exercise}
+            </span>
+            <button class="delete-btn" onclick="removeEx(${ex.id})">X</button>
         `;
         workoutList.appendChild(li);
     });
 }
 
-addBtn.addEventListener('click', () => {
+// UPDATE: Triggered when a checkbox is clicked
+window.toggleComplete = async (id, isCompleted) => {
+    try {
+        await fetch(`http://localhost:5000/api/workouts/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ is_completed: isCompleted })
+        });
+        // Update local state so it matches the database
+        const index = workoutsDB.findIndex(w => w.id === id);
+        if(index !== -1) workoutsDB[index].is_completed = isCompleted;
+    } catch (err) {
+        console.error("Failed to update status", err);
+    }
+};
+
+// INSERT: Add new exercise to DB
+addBtn.addEventListener('click', async () => {
     const val = workoutInput.value.trim();
     if (!val) return; 
     
-    workouts[activeDay].push(val);
-    saveToMemory();
-    workoutInput.value = ""; 
-    render();
+    try {
+        const res = await fetch('http://localhost:5000/api/workouts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ day: activeDay, exercise: val })
+        });
+        const newExercise = await res.json();
+        workoutsDB.push(newExercise); // Add to local array
+        workoutInput.value = ""; 
+        render();
+    } catch (err) {
+        console.error("Failed to save to DB", err);
+    }
 });
 
-window.removeEx = (index) => {
-    workouts[activeDay].splice(index, 1);
-    saveToMemory();
-    render();
+// DELETE: Remove exercise from DB
+window.removeEx = async (id) => {
+    try {
+        await fetch(`http://localhost:5000/api/workouts/${id}`, { method: 'DELETE' });
+        workoutsDB = workoutsDB.filter(w => w.id !== id);
+        render();
+    } catch (err) {
+        console.error("Failed to delete", err);
+    }
 };
 
 /* BARBELL CALCULATOR */
