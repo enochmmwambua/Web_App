@@ -1,0 +1,205 @@
+openapi: 3.0.0
+info:
+  title: GymBuddy API
+  version: 1.0.0
+  description: Public-facing endpoints for downstream partners (NyumbaHub) to access gym amenities, staff, and pricing.
+paths:
+  /memberships:
+    get:
+      summary: Return all active gym membership tiers and pricing
+      responses:
+        '200':
+          description: A list of active membership tiers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - tier
+                    - price
+                    - details
+                  properties:
+                    tier:
+                      type: string
+                      example: "Monthly Standard"
+                    price:
+                      type: string
+                      example: "5,000 KES"
+                    details:
+                      type: string
+                      example: "Unlimited access + GymBuddy App."
+  /users:
+    post:
+      summary: Register a new tenant as a GymBuddy user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - fullName
+                - email
+                - tier
+                - password
+              properties:
+                fullName:
+                  type: string
+                  example: "John Otieno"
+                email:
+                  type: string
+                  format: email
+                  example: "john@example.com"
+                phone:
+                  type: string
+                  example: "0700123456"
+                tier:
+                  type: string
+                  example: "standard"
+                password:
+                  type: string
+                  format: password
+                  example: "SecurePass123!"
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - message
+                  - id
+                properties:
+                  message:
+                    type: string
+                    example: "User created successfully"
+                  id:
+                    type: integer
+                    example: 4
+        '400':
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Email already exists"
+  /trainers:
+    get:
+      summary: Return active personal trainers and their specializations
+      responses:
+        '200':
+          description: A list of active personal trainers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - name
+                    - specialty
+                  properties:
+                    name:
+                      type: string
+                      example: "Coach Marcus"
+                    specialty:
+                      type: string
+                      example: "Strength & Powerlifting"
+  /testimonials:
+    get:
+      summary: Return verified member success stories for social proof
+      responses:
+        '200':
+          description: A list of member testimonials
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - member
+                    - story
+                  properties:
+                    member:
+                      type: string
+                      example: "James K."
+                    story:
+                      type: string
+                      example: "The GymBuddy app feature is a gamechanger."
+  /schedules:
+    get:
+      summary: Return group class schedules to highlight community events
+      responses:
+        '200':
+          description: A list of group class schedules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  required:
+                    - class
+                    - coach
+                    - day
+                    - time
+                  properties:
+                    class:
+                      type: string
+                      example: "HIIT & Conditioning"
+                    coach:
+                      type: string
+                      example: "Sarah"
+                    day:
+                      type: string
+                      example: "Monday"
+                    time:
+                      type: string
+                      example: "17:30"
+  /hours:
+    get:
+      summary: Return gym operating hours and facility availability
+      parameters:
+        - name: status
+          in: query
+          description: Filter to check if the facility is currently open
+          required: false
+          schema:
+            type: string
+            enum: [open]
+      responses:
+        '200':
+          description: Operating hours and open status
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - schedule
+                properties:
+                  currently_open:
+                    type: boolean
+                    example: true
+                  schedule:
+                    type: object
+                    required:
+                      - weekdays
+                      - saturday
+                      - sunday
+                    properties:
+                      weekdays:
+                        type: string
+                        example: "6:00 AM - 8:00 PM"
+                      saturday:
+                        type: string
+                        example: "7:00 AM - 6:00 PM"
+                      sunday:
+                        type: string
+                        example: "8:00 AM - 4:00 PM"

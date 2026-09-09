@@ -117,7 +117,7 @@ app.get('/api/schedules', (req, res) => {
     ]);
 });
 
-// GET /api/hours: Return gym operating hours (with status filter)
+// GET /api/hours: Return gym operating hours 
 app.get('/api/hours', (req, res) => {
     const hours = {
         weekdays: '6:00 AM - 8:00 PM',
@@ -125,7 +125,7 @@ app.get('/api/hours', (req, res) => {
         sunday: '8:00 AM - 4:00 PM'
     };
     
-    // Demonstrate handling the ?status=open query parameter promised in Week 3
+    // Demonstrate handling the ?status=open query parameter to show if the gym is currently open
     if (req.query.status === 'open') {
         res.json({ currently_open: true, schedule: hours });
     } else {
