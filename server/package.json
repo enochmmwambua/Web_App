@@ -1,7 +1,7 @@
 {
   "name": "server",
   "version": "1.0.0",
-  "description": "",
+  "description": "GymBuddy is a proprietary web application designed for Evolve Fitness Langata. It serves as a digital companion for premium facility members, allowing them to track their daily workout splits, manage specific exercises, and calculate precise barbell loads on the fly. It is built to replace physical notebooks for serious lifters.  It is also a hub where members of the gym can access and edit their account information and membership details. Members can also view available classes and apply for them or set up one on ones with instructors.",
   "main": "index.js",
   "scripts": {
   "start": "node index.js",
