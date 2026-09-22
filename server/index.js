@@ -63,12 +63,56 @@ app.delete('/api/workouts/:id', async (req, res) => {
 // SIGNUP ENDPOINTS (signup.html)
 
 // INSERT: Register a new user
-app.post('/api/users', async (req, res) => {
+app.post(['/users','/api/users'], async (req, res) => {
     const { fullName, email, phone, tier, password } = req.body;
+
+    // --- GATE 1: Presence Check ---
+    if (!fullName || !email || !tier || !password) {
+        return res.status(400).json({ 
+            error: "Missing required fields: fullName, email, tier, and password are required." 
+        });
+    }
+
+    // --- GATE 2: Type Safety Check ---
+    if (
+        typeof fullName !== 'string' || 
+        typeof email !== 'string' || 
+        typeof tier !== 'string' || 
+        typeof password !== 'string'
+    ) {
+        return res.status(400).json({ 
+            error: "Invalid data type: fullName, email, tier, and password must be strings." 
+        });
+    }
+
+    // --- GATE 3: Usability & Format Check ---
+    const trimmedName = fullName.trim();
+    const trimmedEmail = email.trim();
+    const trimmedPassword = password.trim();
+
+    if (trimmedName.length === 0) {
+        return res.status(400).json({ error: "fullName cannot be empty or blank." });
+    }
+
+    // Simple email format check
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+        return res.status(400).json({ error: "Invalid email address format." });
+    }
+
+    if (trimmedPassword.length < 6) {
+        return res.status(400).json({ error: "Password must be at least 6 characters long." });
+    }
+
+    // Optional phone validation (if provided, must be a string)
+    if (phone && typeof phone !== 'string') {
+        return res.status(400).json({ error: "phone must be a string." });
+    }
+
     try {
         const [result] = await db.query(
             'INSERT INTO users (full_name, email, phone, membership_tier, password) VALUES (?, ?, ?, ?, ?)',
-            [fullName, email, phone, tier, password]
+            [trimmedName, trimmedEmail, phone || null, tier, trimmedPassword]
         );
         res.status(201).json({ message: 'User created successfully', id: result.insertId });
     } catch (err) {
