@@ -8,21 +8,29 @@ require('dotenv').config();
 
 const app = express();
 
-// Middleware
+
 app.use(cors());
 app.use(express.json());
+const fs = require('fs');
 
-// Serve Interactive Swagger Documentation at /docs
-try {
-    const swaggerDocument = YAML.load(path.join(__dirname, '../openapi.yaml'));
-    app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
-} catch (err) {
-    console.warn('Swagger UI could not be loaded (openapi.yaml missing from parent directory):', err.message);
+const localYaml = path.join(__dirname, 'openapi.yaml');
+const parentYaml = path.join(__dirname, '../openapi.yaml');
+const yamlPath = fs.existsSync(localYaml) ? localYaml : (fs.existsSync(parentYaml) ? parentYaml : null);
+
+if (yamlPath) {
+    try {
+        const swaggerDocument = YAML.load(yamlPath);
+        app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+        console.log(`[SWAGGER] UI successfully mounted at /docs using ${yamlPath}`);
+    } catch (err) {
+        console.error('[SWAGGER ERROR] Failed to parse YAML file:', err.message);
+    }
+} else {
+    console.error(`[SWAGGER ERROR] openapi.yaml not found at ${localYaml} or ${parentYaml}`);
 }
 
-// ==========================================
+
 // WORKOUT TRACKER ENDPOINTS (index.html)
-// ==========================================
 
 // SELECT: Get all workouts
 app.get('/api/workouts', async (req, res) => {
@@ -73,9 +81,9 @@ app.delete('/api/workouts/:id', async (req, res) => {
     }
 });
 
-// ==========================================
+
 // SIGNUP ENDPOINTS (signup.html & openapi.yaml)
-// ==========================================
+
 
 // INSERT: Register a new user
 app.post(['/users', '/api/users'], async (req, res) => {
@@ -137,9 +145,8 @@ app.post(['/users', '/api/users'], async (req, res) => {
     }
 });
 
-// ==========================================
 // CONTRACT READ ENDPOINTS (Group 10 NyumbaHub)
-// ==========================================
+
 
 // GET /memberships: Return active gym membership tiers
 app.get(['/memberships', '/api/memberships'], (req, res) => {
