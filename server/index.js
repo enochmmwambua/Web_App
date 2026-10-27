@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const YAML = require('yamljs');
 const swaggerUi = require('swagger-ui-express');
 const db = require('./db');
@@ -8,11 +9,12 @@ require('dotenv').config();
 
 const app = express();
 
-
+// Middleware: Body Parsers & Static Files
 app.use(cors());
 app.use(express.json());
-const fs = require('fs');
+app.use(express.static(path.join(__dirname, '../')));
 
+// Serve Interactive Swagger Documentation at /docs
 const localYaml = path.join(__dirname, 'openapi.yaml');
 const parentYaml = path.join(__dirname, '../openapi.yaml');
 const yamlPath = fs.existsSync(localYaml) ? localYaml : (fs.existsSync(parentYaml) ? parentYaml : null);
@@ -28,6 +30,71 @@ if (yamlPath) {
 } else {
     console.error(`[SWAGGER ERROR] openapi.yaml not found at ${localYaml} or ${parentYaml}`);
 }
+
+
+// WEEK 9: API SECURITY & RATE LIMITING
+
+const VALID_KEYS = (process.env.API_KEYS || '').split(',').map(k => k.trim()).filter(Boolean);
+
+// 1. API Key Auth Middleware (Registered BEFORE protected routes)
+function requireApiKey(req, res, next) {
+    // Exempt Swagger documentation, public health check, and internal frontend app APIs
+    const isPublicOrInternal = 
+        req.path.startsWith('/docs') || 
+        req.path === '/' ||
+        req.path.startsWith('/api/workouts') ||
+        req.path.startsWith('/api/login') ||
+        req.path.startsWith('/api/gym-reports') ||
+        req.path.match(/^\/api\/users\/\d+$/); // Profile read/update for logged-in members
+
+    if (isPublicOrInternal) {
+        return next();
+    }
+
+    const key = req.get('X-API-Key');
+    if (!key || !VALID_KEYS.includes(key)) {
+        return res.status(401).json({ error: "Missing or invalid API key. Pass 'X-API-Key' in headers." });
+    }
+
+    req.apiKey = key;
+    next();
+}
+
+// 2. In-Memory Rate Limiter Middleware (Week 9)
+function rateLimit({ windowMs, max }) {
+    const hits = new Map();
+
+    return (req, res, next) => {
+        // Exempt Swagger docs and root
+        if (req.path.startsWith('/docs') || req.path === '/') return next();
+
+        const id = req.apiKey || req.ip;
+        const now = Date.now();
+        let entry = hits.get(id);
+
+        if (!entry || now >= entry.resetAt) {
+            entry = { count: 0, resetAt: now + windowMs };
+            hits.set(id, entry);
+        }
+
+        entry.count += 1;
+        if (entry.count > max) {
+            const retryAfter = Math.ceil((entry.resetAt - now) / 1000);
+            res.set('Retry-After', String(retryAfter));
+            return res.status(429).json({
+                error: "Too many requests. Rate limit exceeded.",
+                retryAfterSeconds: retryAfter
+            });
+        }
+
+        next();
+    };
+}
+
+// Register security middleware (100 requests per minute)
+app.use(requireApiKey);
+app.use(rateLimit({ windowMs: 60000, max: 100 }));
+
 
 
 // WORKOUT TRACKER ENDPOINTS (index.html)
@@ -82,21 +149,19 @@ app.delete('/api/workouts/:id', async (req, res) => {
 });
 
 
-// SIGNUP ENDPOINTS (signup.html & openapi.yaml)
 
+// SIGNUP & USER REGISTRATION
 
 // INSERT: Register a new user
 app.post(['/users', '/api/users'], async (req, res) => {
     const { fullName, email, phone, tier, password } = req.body;
 
-    // GATE 1: Presence Check
     if (!fullName || !email || !tier || !password) {
         return res.status(400).json({ 
             error: "Missing required fields: fullName, email, tier, and password are required." 
         });
     }
 
-    // GATE 2: Type Safety Check
     if (
         typeof fullName !== 'string' || 
         typeof email !== 'string' || 
@@ -108,7 +173,6 @@ app.post(['/users', '/api/users'], async (req, res) => {
         });
     }
 
-    // GATE 3: Usability & Format Check
     const trimmedName = fullName.trim();
     const trimmedEmail = email.trim();
     const trimmedPassword = password.trim();
@@ -135,7 +199,18 @@ app.post(['/users', '/api/users'], async (req, res) => {
             'INSERT INTO users (full_name, email, phone, membership_tier, password) VALUES (?, ?, ?, ?, ?)',
             [trimmedName, trimmedEmail, phone || null, tier, trimmedPassword]
         );
-        res.status(201).json({ message: 'User created successfully', id: result.insertId });
+
+        res.status(201).json({ 
+            message: 'User created successfully', 
+            id: result.insertId,
+            user: {
+                id: result.insertId,
+                fullName: trimmedName,
+                email: trimmedEmail,
+                phone: phone || null,
+                tier: tier
+            }
+        });
     } catch (err) {
         if (err.code === 'ER_DUP_ENTRY') {
             return res.status(400).json({ error: 'Email already exists' });
@@ -145,8 +220,177 @@ app.post(['/users', '/api/users'], async (req, res) => {
     }
 });
 
-// CONTRACT READ ENDPOINTS (Group 10 NyumbaHub)
 
+
+// AUTHENTICATION & PROFILE MANAGEMENT
+
+// POST /api/login: Verify credentials and return session data
+app.post(['/login', '/api/login'], async (req, res) => {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+        return res.status(400).json({ error: "Email and password are required." });
+    }
+
+    try {
+        const [rows] = await db.query(
+            'SELECT id, full_name, email, phone, membership_tier FROM users WHERE email = ? AND password = ?',
+            [email.trim(), password.trim()]
+        );
+
+        if (rows.length === 0) {
+            return res.status(401).json({ error: "Invalid email or password." });
+        }
+
+        const user = rows[0];
+        res.status(200).json({
+            message: "Login successful",
+            user: {
+                id: user.id,
+                fullName: user.full_name,
+                email: user.email,
+                phone: user.phone,
+                tier: user.membership_tier
+            }
+        });
+    } catch (err) {
+        console.error('[LOGIN ERROR]', err);
+        res.status(500).json({ error: "Failed to login. Please try again." });
+    }
+});
+
+// GET /api/users/:id: Retrieve profile details
+app.get(['/users/:id', '/api/users/:id'], async (req, res) => {
+    try {
+        const [rows] = await db.query(
+            'SELECT id, full_name, email, phone, membership_tier FROM users WHERE id = ?',
+            [req.params.id]
+        );
+
+        if (rows.length === 0) {
+            return res.status(404).json({ error: "User account not found." });
+        }
+
+        const user = rows[0];
+        res.status(200).json({
+            id: user.id,
+            fullName: user.full_name,
+            email: user.email,
+            phone: user.phone,
+            tier: user.membership_tier
+        });
+    } catch (err) {
+        console.error('[PROFILE GET ERROR]', err);
+        res.status(500).json({ error: "Could not fetch user profile." });
+    }
+});
+
+// PUT /api/users/:id: Update member information
+app.put(['/users/:id', '/api/users/:id'], async (req, res) => {
+    const userId = req.params.id;
+    const { fullName, phone, tier, password } = req.body;
+
+    if (!fullName || !tier) {
+        return res.status(400).json({ error: "Full Name and Membership Tier are required." });
+    }
+
+    try {
+        if (password && password.trim().length >= 6) {
+            await db.query(
+                'UPDATE users SET full_name = ?, phone = ?, membership_tier = ?, password = ? WHERE id = ?',
+                [fullName.trim(), phone || null, tier, password.trim(), userId]
+            );
+        } else {
+            await db.query(
+                'UPDATE users SET full_name = ?, phone = ?, membership_tier = ? WHERE id = ?',
+                [fullName.trim(), phone || null, tier, userId]
+            );
+        }
+
+        const [rows] = await db.query(
+            'SELECT id, full_name, email, phone, membership_tier FROM users WHERE id = ?',
+            [userId]
+        );
+
+        res.status(200).json({
+            message: "Profile updated successfully",
+            user: {
+                id: rows[0].id,
+                fullName: rows[0].full_name,
+                email: rows[0].email,
+                phone: rows[0].phone,
+                tier: rows[0].membership_tier
+            }
+        });
+    } catch (err) {
+        console.error('[PROFILE UPDATE ERROR]', err);
+        res.status(500).json({ error: "Failed to update profile information." });
+    }
+});
+
+
+
+// UPSTREAM INTEGRATION: Group 8 (ShieldBox)
+
+const SHIELDBOX_URL = process.env.SHIELDBOX_BASE_URL;
+
+// POST /api/gym-reports
+app.post('/api/gym-reports', async (req, res) => {
+    const { category, description } = req.body;
+    if (!category || !description) {
+        return res.status(400).json({ error: "Category and description are required." });
+    }
+
+    try {
+        const response = await fetch(`${process.env.SHIELDBOX_BASE_URL}/reports`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-API-Key': process.env.SHIELDBOX_API_KEY
+            },
+            body: JSON.stringify({ category, description })
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+            return res.status(response.status).json({ error: data.message || data.error || "ShieldBox rejected submission." });
+        }
+        res.status(201).json(data);
+    } catch (err) {
+        console.error('[SHIELDBOX POST FAILED]', err.cause?.code || err.message);
+        res.status(502).json({ error: "Maintenance reporting service is temporarily offline." });
+    }
+});
+
+// GET /api/gym-reports/:caseCode
+app.get('/api/gym-reports/:caseCode', async (req, res) => {
+    const { caseCode } = req.params;
+
+    try {
+        const response = await fetch(`${process.env.SHIELDBOX_BASE_URL}/reports/${encodeURIComponent(caseCode)}`, {
+            method: 'GET',
+            headers: {
+                'X-API-Key': process.env.SHIELDBOX_API_KEY,
+                'Accept': 'application/json'
+            }
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+            if (response.status === 404) {
+                return res.status(404).json({ error: data.error || "No report found matching that Case Code." });
+            }
+            return res.status(response.status).json({ error: data.message || data.error || "ShieldBox error." });
+        }
+        res.status(200).json(data);
+    } catch (err) {
+        console.error('[SHIELDBOX GET FAILED]', err.cause?.code || err.message);
+        res.status(502).json({ error: "Maintenance reporting service is temporarily offline." });
+    }
+});
+
+// ==========================================
+// CONTRACT READ ENDPOINTS (Group 10 NyumbaHub)
 
 // GET /memberships: Return active gym membership tiers
 app.get(['/memberships', '/api/memberships'], (req, res) => {
@@ -203,7 +447,9 @@ app.get('/', (req, res) => {
     res.send('GymBuddy API is running. Access interactive docs at /docs');
 });
 
-// Start Server
+
+// START SERVER
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);

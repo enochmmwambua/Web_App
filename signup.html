@@ -49,35 +49,44 @@
                 <button type="submit" class="cta-btn full-width">Complete Signup</button>
             </form>
 
+            <div class="auth-footer">
+                <p>Already have an account? <a href="login.html">Log In</a></p>
+            </div>
+
         </div>
     </div>
     
 <!-- Signup Form Logic -->
     <script>
         document.getElementById('signupForm').addEventListener('submit', async (e) => {
-            e.preventDefault(); // Prevents the page from reloading
-            
+            e.preventDefault();
+    
             const userData = {
-                fullName: document.getElementById('fullName').value,
-                email: document.getElementById('email').value,
-                phone: document.getElementById('phone').value,
+                fullName: document.getElementById('fullName').value.trim(),
+                email: document.getElementById('email').value.trim(),
+                phone: document.getElementById('phone').value.trim() || null,
                 tier: document.getElementById('membershipTier').value,
-                password: document.getElementById('password').value
+                password: document.getElementById('password').value.trim()
             };
 
             try {
-                const response = await fetch('http://localhost:5000/api/users', {
+                const response = await fetch('/api/users', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(userData)
                 });
 
+                const data = await response.json();
+
                 if (response.ok) {
+                    // Auto-login session save
+                    if (data.user) {
+                        localStorage.setItem('gymUser', JSON.stringify(data.user));
+                    }
                     alert('Welcome to Evolve Fitness! Your membership is confirmed.');
-                    window.location.href = 'index.html'; // Send them back to the main app
+                    window.location.href = 'profile.html';
                 } else {
-                    const errorData = await response.json();
-                    alert(`Error: ${errorData.error}`); // Will trigger if email already exists
+                    alert(`Error: ${data.error}`);
                 }
             } catch (err) {
                 console.error('Network error:', err);

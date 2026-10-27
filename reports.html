@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Safety & Incident Reporting — Evolve Fitness Langata</title>
+    <link rel="stylesheet" href="style.css?v=2">
+</head>
+<body>
+    
+    <div class="top-bar">
+        <span>📍 Langata Rd, Nairobi</span>
+        <span>📞 +254 700 000 000</span> 
+        <span>✉️ info@evolvefitness.co.ke</span>
+    </div>
+
+    <nav class="main-nav">
+        <div class="logo">Evolve Fitness</div>
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="index.html#tools">GymBuddy App</a>
+            <a href="reports.html" style="color: #38bdf8; font-weight: 700;">Safety & Maintenance</a>
+            <a href="signup.html" class="cta-btn">Join Now</a>
+        </div>
+    </nav>
+
+    <section class="hero" style="height: 280px; margin-bottom: 1rem;">
+        <div class="hero-content">
+            <h1>Anonymous Incident & Maintenance Desk</h1>
+            <p>Powered by ShieldBox. Report broken equipment, safety concerns, or facility faults with zero personal tracking.</p>
+        </div>
+    </section>
+
+    <div class="container business-band" style="padding-top: 1rem; max-width: 900px;">
+        
+        <!-- SUBMIT NEW REPORT SECTION -->
+        <div class="calculator-card" style="margin-bottom: 2.5rem;">
+            <h2 class="section-title left-align" style="margin-bottom: 0.5rem;">Submit an Anonymous Report</h2>
+            <p style="color: #94a3b8; font-size: 0.95rem; margin-bottom: 1.5rem;">
+                Your identity is never attached to this report. Once submitted, ShieldBox assigns a unique <strong>Case Code</strong> that you can use to monitor resolution progress.
+            </p>
+
+            <form id="reportForm">
+                <div style="margin-bottom: 1.25rem;">
+                    <label for="category" style="display: block; color: #38bdf8; font-weight: 600; margin-bottom: 0.5rem;">Issue Category</label>
+                    <select id="category" class="report-select" required>
+                        <option value="" disabled selected>Select category...</option>
+                        <option value="maintenance">Maintenance (Broken Cables, Pins, Benches, AC, Showers)</option>
+                        <option value="safety">Safety Concern (Slippery floor, loose weights, hazards)</option>
+                        <option value="incident">General Incident (Injury, facility disruption)</option>
+                        <option value="harassment">Harassment / Conduct Issue</option>
+                    </select>
+                </div>
+
+                <div style="margin-bottom: 1.5rem;">
+                    <label for="description" style="display: block; color: #38bdf8; font-weight: 600; margin-bottom: 0.5rem;">Detailed Description</label>
+                    <textarea id="description" rows="5" class="report-textarea" placeholder="Specify machine location, plate weight, rack number, or any safety observations..." required></textarea>
+                </div>
+
+                <button type="submit" id="submitReportBtn" class="cta-btn" style="border: none; cursor: pointer;">
+                    Submit Anonymously
+                </button>
+            </form>
+
+            <!-- Case Code Success Banner -->
+            <div id="caseAlertBox" class="report-banner success-banner" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 15px;">
+                    <div>
+                        <h4 style="color: #4ade80; margin-bottom: 6px;">Report Successfully Submitted!</h4>
+                        <p style="color: #cbd5e1; font-size: 0.9rem; margin-bottom: 8px;">
+                            Your unique ShieldBox Case Code is:
+                        </p>
+                        <div class="code-badge" id="issuedCaseCodeDisplay">SB-XXXX</div>
+                        <p style="color: #94a3b8; font-size: 0.85rem; margin-top: 8px;">
+                            ⚠️ <strong>Save this code now.</strong> ShieldBox reports are entirely anonymous; this code is the only way to track investigation status.
+                        </p>
+                    </div>
+                    <button type="button" id="copyCodeBtn" class="outline-btn" style="padding: 6px 14px; font-size: 0.85rem;">Copy</button>
+                </div>
+            </div>
+
+            <!-- Error Banner -->
+            <div id="submitErrorBox" class="report-banner error-banner" style="display: none;">
+                <span id="submitErrorMessage">Unable to submit report.</span>
+            </div>
+        </div>
+
+        <!-- TRACK REPORT STATUS SECTION -->
+        <div class="calculator-card">
+            <h2 class="section-title left-align" style="margin-bottom: 0.5rem;">Track Existing Case</h2>
+            <p style="color: #94a3b8; font-size: 0.95rem; margin-bottom: 1.5rem;">
+                Enter your issued Case Code to query the real-time resolution status from ShieldBox.
+            </p>
+
+            <div class="input-group" style="margin: 0 0 1rem 0;">
+                <input type="text" id="trackCodeInput" placeholder="Enter Case Code (e.g. SB-88219)" style="text-transform: uppercase;">
+                <button type="button" id="trackBtn" class="cta-btn" style="border: none; white-space: nowrap;">Query Status</button>
+            </div>
+
+            <!-- Tracking Result Display -->
+            <div id="trackResultBox" style="display: none; margin-top: 1.5rem;"></div>
+        </div>
+
+    </div>
+
+    <footer>
+        <div class="container footer-grid">
+            <div class="footer-col">
+                <h3>Evolve Fitness Langata</h3>
+                <p>Nairobi's elite training ground.</p>
+            </div>
+            <div class="footer-col">
+                <h3>Hours</h3>
+                <p>Mon-Fri: 6:00 AM - 8:00 PM</p>
+                <p>Sat: 7:00 AM - 6:00 PM</p>
+                <p>Sun: 8:00 AM - 4:00 PM</p>
+            </div>
+            <div class="footer-col">
+                <h3>Contact</h3>
+                <p>📞 +254 700 000 000</p>
+                <p>✉️ info@evolvefitness.co.ke</p>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>© 2026 Evolve Fitness | GymBuddy Incident System</p>
+        </div>
+    </footer>
+
+    <!-- Frontend Logic -->
+    <script>
+        const API_BASE = window.location.port === '5500' || window.location.protocol === 'file:'
+        ? 'http://localhost:5000' 
+        : '';
+
+        // 1. Submit Report
+        const reportForm = document.getElementById('reportForm');
+        const submitBtn = document.getElementById('submitReportBtn');
+        const caseAlertBox = document.getElementById('caseAlertBox');
+        const submitErrorBox = document.getElementById('submitErrorBox');
+        const issuedCaseCodeDisplay = document.getElementById('issuedCaseCodeDisplay');
+        const submitErrorMessage = document.getElementById('submitErrorMessage');
+
+        reportForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            caseAlertBox.style.display = 'none';
+            submitErrorBox.style.display = 'none';
+
+            const category = document.getElementById('category').value;
+            const description = document.getElementById('description').value.trim();
+
+            submitBtn.disabled = true;
+            submitBtn.innerText = 'Submitting to ShieldBox...';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/gym-reports`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ category, description })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to submit report.');
+                }
+
+                // Match variations in how ShieldBox returns the code
+                const code = data.caseCode || data.case_code || data.id || data.code;
+                issuedCaseCodeDisplay.innerText = code;
+                caseAlertBox.style.display = 'block';
+                reportForm.reset();
+            } catch (err) {
+                submitErrorMessage.innerText = err.message || 'Incident reporting service is temporarily offline.';
+                submitErrorBox.style.display = 'block';
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerText = 'Submit Anonymously';
+            }
+        });
+
+        // Copy Code Button
+        document.getElementById('copyCodeBtn').addEventListener('click', () => {
+            const code = issuedCaseCodeDisplay.innerText;
+            navigator.clipboard.writeText(code).then(() => {
+                const btn = document.getElementById('copyCodeBtn');
+                btn.innerText = 'Copied!';
+                setTimeout(() => { btn.innerText = 'Copy'; }, 2000);
+            });
+        });
+
+        // 2. Track Case Status
+        const trackBtn = document.getElementById('trackBtn');
+        const trackCodeInput = document.getElementById('trackCodeInput');
+        const trackResultBox = document.getElementById('trackResultBox');
+
+        trackBtn.addEventListener('click', async () => {
+            const code = trackCodeInput.value.trim();
+            trackResultBox.style.display = 'none';
+
+            if (!code) {
+                alert('Please enter a valid Case Code.');
+                return;
+            }
+
+            trackBtn.disabled = true;
+            trackBtn.innerText = 'Checking...';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/gym-reports/${encodeURIComponent(code)}`);
+                const data = await res.json();
+
+                trackResultBox.style.display = 'block';
+
+                if (!res.ok) {
+                    trackResultBox.innerHTML = `
+                        <div class="report-banner error-banner">
+                            <strong>Status Lookup Failed:</strong> ${data.error || 'Case not found.'}
+                        </div>
+                    `;
+                    return;
+                }
+
+                // Status Pill Color Assignment
+                const rawStatus = (data.status || 'Pending').toLowerCase();
+                let statusClass = 'status-pending';
+                if (rawStatus.includes('review') || rawStatus.includes('progress')) statusClass = 'status-review';
+                if (rawStatus.includes('resolve') || rawStatus.includes('closed')) statusClass = 'status-resolved';
+
+                trackResultBox.innerHTML = `
+                    <div style="background-color: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 1.5rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #334155; padding-bottom: 10px;">
+                            <span style="font-weight: bold; color: #38bdf8; font-size: 1.1rem;">Case: ${code}</span>
+                            <span class="status-pill ${statusClass}">${data.status || 'Pending'}</span>
+                        </div>
+                        <p style="margin-bottom: 8px;"><strong>Category:</strong> <span style="color: #cbd5e1;">${data.category || 'General'}</span></p>
+                        <p style="margin-bottom: 8px;"><strong>Description:</strong> <span style="color: #94a3b8;">${data.description || 'No description provided.'}</span></p>
+                        <p style="font-size: 0.85rem; color: #64748b; margin-top: 12px;">Last Updated: ${data.timestamp ? new Date(data.timestamp).toLocaleString() : 'Recent'}</p>
+                    </div>
+                `;
+            } catch (err) {
+                trackResultBox.style.display = 'block';
+                trackResultBox.innerHTML = `
+                    <div class="report-banner error-banner">
+                        Maintenance reporting service is temporarily offline. Please try again shortly.
+                    </div>
+                `;
+            } finally {
+                trackBtn.disabled = false;
+                trackBtn.innerText = 'Query Status';
+            }
+        });
+    </script>
+</body>
+</html>

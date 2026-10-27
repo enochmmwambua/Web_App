@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Member Profile — Evolve Fitness Langata</title>
+    <link rel="stylesheet" href="style.css?v=2">
+</head>
+<body class="auth-body">
+    
+    <nav class="main-nav auth-nav">
+        <div class="logo">Evolve Fitness</div>
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="index.html#tools">GymBuddy App</a>
+            <a href="reports.html">Safety & Maintenance</a>
+            <button id="logoutBtn" style="background: transparent; color: #ef4444; border: 1px solid #ef4444; padding: 6px 14px; border-radius: 20px; cursor: pointer; margin-left: 15px;">Log Out</button>
+        </div>
+    </nav>
+
+    <div class="auth-container" style="padding-top: 1rem;">
+        <div class="auth-card" style="max-width: 550px; text-align: left;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid #334155; padding-bottom: 1rem;">
+                <div>
+                    <h2 style="margin-bottom: 4px;">My Member Profile</h2>
+                    <span id="activeTierBadge" style="display: inline-block; background-color: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid #38bdf8; padding: 2px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; text-transform: uppercase;">Standard</span>
+                </div>
+                <span id="userIdLabel" style="font-size: 0.85rem; color: #64748b; font-family: monospace;">ID: #</span>
+            </div>
+
+            <form id="profileForm" class="auth-form">
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; color: #94a3b8; font-size: 0.85rem; margin-bottom: 6px;">Email Address (Primary Account Key)</label>
+                    <input type="email" id="profEmail" disabled style="background-color: #1e293b; color: #64748b; cursor: not-allowed; border-color: #1e293b;">
+                </div>
+
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; color: #38bdf8; font-size: 0.85rem; margin-bottom: 6px;">Full Name</label>
+                    <input type="text" id="profFullName" required>
+                </div>
+
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; color: #38bdf8; font-size: 0.85rem; margin-bottom: 6px;">Phone Number</label>
+                    <input type="tel" id="profPhone" placeholder="0700 000 000">
+                </div>
+
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; color: #38bdf8; font-size: 0.85rem; margin-bottom: 6px;">Membership Tier</label>
+                    <select id="profTier" required>
+                        <option value="Daily Drop-In">Daily Drop-In (500 KES)</option>
+                        <option value="Monthly Standard">Monthly Standard (5,000 KES)</option>
+                        <option value="Student">Student (4,500 KES)</option>
+                    </select>
+                </div>
+
+                <div style="margin-bottom: 1.5rem; border-top: 1px solid #334155; padding-top: 1rem;">
+                    <label style="display: block; color: #94a3b8; font-size: 0.85rem; margin-bottom: 6px;">Change Password (leave blank to keep current)</label>
+                    <input type="password" id="profPassword" placeholder="Enter new password (min. 6 characters)">
+                </div>
+
+                <button type="submit" id="saveBtn" class="cta-btn full-width">Save Changes</button>
+            </form>
+
+            <div id="statusAlert" style="display: none; margin-top: 1.25rem; padding: 12px; border-radius: 6px; font-size: 0.9rem; text-align: center;"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.port === '5500' || window.location.protocol === 'file:'
+            ? 'http://localhost:5000' 
+            : '';
+
+        // Check local session
+        const sessionUser = JSON.parse(localStorage.getItem('gymUser'));
+        if (!sessionUser || !sessionUser.id) {
+            window.location.href = 'login.html';
+        }
+
+        // Hydrate from backend to ensure data is current
+        async function loadProfile() {
+            try {
+                const res = await fetch(`${API_BASE}/api/users/${sessionUser.id}`);
+                if (!res.ok) throw new Error('Could not verify profile');
+                const user = await res.json();
+
+                document.getElementById('userIdLabel').innerText = `ID: #${user.id}`;
+                document.getElementById('profEmail').value = user.email || '';
+                document.getElementById('profFullName').value = user.fullName || '';
+                document.getElementById('profPhone').value = user.phone || '';
+                document.getElementById('profTier').value = user.tier || 'Monthly Standard';
+                document.getElementById('activeTierBadge').innerText = user.tier || 'Standard';
+            } catch (err) {
+                console.error(err);
+                // Fallback to local session storage
+                document.getElementById('profEmail').value = sessionUser.email || '';
+                document.getElementById('profFullName').value = sessionUser.fullName || '';
+                document.getElementById('profPhone').value = sessionUser.phone || '';
+                document.getElementById('profTier').value = sessionUser.tier || 'Monthly Standard';
+            }
+        }
+
+        loadProfile();
+
+        // Update profile
+        document.getElementById('profileForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const alertBox = document.getElementById('statusAlert');
+            const saveBtn = document.getElementById('saveBtn');
+
+            const payload = {
+                fullName: document.getElementById('profFullName').value.trim(),
+                phone: document.getElementById('profPhone').value.trim(),
+                tier: document.getElementById('profTier').value
+            };
+
+            const newPassword = document.getElementById('profPassword').value.trim();
+            if (newPassword) {
+                if (newPassword.length < 6) {
+                    alert('New password must be at least 6 characters long.');
+                    return;
+                }
+                payload.password = newPassword;
+            }
+
+            saveBtn.disabled = true;
+            saveBtn.innerText = 'Saving...';
+            alertBox.style.display = 'none';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/users/${sessionUser.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Update failed');
+
+                // Update session
+                localStorage.setItem('gymUser', JSON.stringify(data.user));
+                document.getElementById('activeTierBadge').innerText = data.user.tier;
+                document.getElementById('profPassword').value = '';
+
+                alertBox.style.display = 'block';
+                alertBox.style.backgroundColor = 'rgba(22, 101, 52, 0.25)';
+                alertBox.style.border = '1px solid #22c55e';
+                alertBox.style.color = '#4ade80';
+                alertBox.innerText = 'Profile updated successfully!';
+            } catch (err) {
+                alertBox.style.display = 'block';
+                alertBox.style.backgroundColor = 'rgba(153, 27, 27, 0.25)';
+                alertBox.style.border = '1px solid #ef4444';
+                alertBox.style.color = '#fca5a5';
+                alertBox.innerText = err.message;
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.innerText = 'Save Changes';
+            }
+        });
+
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            localStorage.removeItem('gymUser');
+            window.location.href = 'index.html';
+        });
+    </script>
+</body>
+</html>

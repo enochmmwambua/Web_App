@@ -182,5 +182,47 @@ window.addEventListener('resize', () => {
     moveToSlide(currentSlideIndex);
 });
 
+// Display active member in navbar if logged in
+document.addEventListener('DOMContentLoaded', () => {
+    const sessionUser = JSON.parse(localStorage.getItem('gymUser'));
+    const authSlot = document.getElementById('navAuthSlot');
+
+    if (sessionUser && sessionUser.fullName && authSlot) {
+        authSlot.innerHTML = `
+            <a href="profile.html" style="color: #38bdf8; font-weight: bold; margin-left: 15px;">
+                👤 ${sessionUser.fullName.split(' ')[0]}
+            </a>
+            <a href="profile.html" class="outline-btn" style="padding: 6px 14px; font-size: 0.85rem; margin-left: 10px;">Account</a>
+        `;
+    }
+});
+
+// Check active login state and update the homepage header
+document.addEventListener('DOMContentLoaded', () => {
+    const sessionUser = JSON.parse(localStorage.getItem('gymUser'));
+    const authSlot = document.getElementById('navAuthSlot');
+
+    if (sessionUser && sessionUser.fullName && authSlot) {
+        const firstName = sessionUser.fullName.split(' ')[0];
+        
+        authSlot.innerHTML = `
+            <a href="profile.html" style="color: #38bdf8; font-weight: bold; margin-left: 15px; text-decoration: none;">
+                👤 ${firstName}
+            </a>
+            <a href="profile.html" class="outline-btn" style="padding: 6px 14px; font-size: 0.85rem; margin-left: 10px;">
+                Account
+            </a>
+            <button id="homeLogoutBtn" style="background: transparent; color: #ef4444; border: 1px solid #ef4444; padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; cursor: pointer; margin-left: 10px;">
+                Log Out
+            </button>
+        `;
+
+        document.getElementById('homeLogoutBtn').addEventListener('click', () => {
+            localStorage.removeItem('gymUser');
+            window.location.reload();
+        });
+    }
+});
+
 // Innitiaslization
 init();
