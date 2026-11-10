@@ -63,7 +63,7 @@
             </form>
 
             <!-- Case Code Success Banner -->
-            <div id="caseAlertBox" class="report-banner success-banner" style="display: none;">
+            <div id="caseAlertBox" class="report-banner success-banner" style="display: none; margin-top: 1.5rem;">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 15px;">
                     <div>
                         <h4 style="color: #4ade80; margin-bottom: 6px;">Report Successfully Submitted!</h4>
@@ -80,7 +80,7 @@
             </div>
 
             <!-- Error Banner -->
-            <div id="submitErrorBox" class="report-banner error-banner" style="display: none;">
+            <div id="submitErrorBox" class="report-banner error-banner" style="display: none; margin-top: 1.5rem;">
                 <span id="submitErrorMessage">Unable to submit report.</span>
             </div>
         </div>
@@ -89,7 +89,7 @@
         <div class="calculator-card">
             <h2 class="section-title left-align" style="margin-bottom: 0.5rem;">Track Existing Case</h2>
             <p style="color: #94a3b8; font-size: 0.95rem; margin-bottom: 1.5rem;">
-                Enter your issued Case Code to query the real-time resolution status from ShieldBox.
+                Enter your issued Case Code to query status, read investigator updates, post notes, or resolve/withdraw cases.
             </p>
 
             <div class="input-group" style="margin: 0 0 1rem 0;">
@@ -97,7 +97,6 @@
                 <button type="button" id="trackBtn" class="cta-btn" style="border: none; white-space: nowrap;">Query Status</button>
             </div>
 
-            <!-- Tracking Result Display -->
             <div id="trackResultBox" style="display: none; margin-top: 1.5rem;"></div>
         </div>
 
@@ -129,10 +128,20 @@
     <!-- Frontend Logic -->
     <script>
         const API_BASE = window.location.port === '5500' || window.location.protocol === 'file:'
-        ? 'http://localhost:5000' 
-        : '';
+            ? 'http://localhost:5000' 
+            : '';
 
-        // 1. Submit Report
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        // 1. Submit New Report
         const reportForm = document.getElementById('reportForm');
         const submitBtn = document.getElementById('submitReportBtn');
         const caseAlertBox = document.getElementById('caseAlertBox');
@@ -164,7 +173,6 @@
                     throw new Error(data.error || 'Failed to submit report.');
                 }
 
-                // Match variations in how ShieldBox returns the code
                 const code = data.caseCode || data.case_code || data.id || data.code;
                 issuedCaseCodeDisplay.innerText = code;
                 caseAlertBox.style.display = 'block';
@@ -188,20 +196,12 @@
             });
         });
 
-        // 2. Track Case Status
+        // 2. Track, Note, Resolve, and Withdraw Reports
         const trackBtn = document.getElementById('trackBtn');
         const trackCodeInput = document.getElementById('trackCodeInput');
         const trackResultBox = document.getElementById('trackResultBox');
 
-        trackBtn.addEventListener('click', async () => {
-            const code = trackCodeInput.value.trim();
-            trackResultBox.style.display = 'none';
-
-            if (!code) {
-                alert('Please enter a valid Case Code.');
-                return;
-            }
-
+        async function fetchAndRenderReport(code) {
             trackBtn.disabled = true;
             trackBtn.innerText = 'Checking...';
 
@@ -214,29 +214,170 @@
                 if (!res.ok) {
                     trackResultBox.innerHTML = `
                         <div class="report-banner error-banner">
-                            <strong>Status Lookup Failed:</strong> ${data.error || 'Case not found.'}
+                            <strong>Status Lookup Failed:</strong> ${escapeHtml(data.error || 'Case not found.')}
                         </div>
                     `;
                     return;
                 }
 
-                // Status Pill Color Assignment
+                // Week 11 Stale Data Banner Check
+                const isStale = data.stale === true;
+                const staleBanner = isStale
+                    ? `<div style="background-color: #854d0e; color: #fef08a; padding: 10px 14px; border-radius: 6px; margin-bottom: 14px; font-size: 0.88rem; font-weight: 500;">
+                           ⚠️ <strong>Showing saved data from ${new Date(data.asof).toLocaleTimeString()}</strong>. The reporting server is currently slow or unreachable.
+                       </div>`
+                    : '';
+
                 const rawStatus = (data.status || 'Pending').toLowerCase();
                 let statusClass = 'status-pending';
                 if (rawStatus.includes('review') || rawStatus.includes('progress')) statusClass = 'status-review';
                 if (rawStatus.includes('resolve') || rawStatus.includes('closed')) statusClass = 'status-resolved';
 
+                const isResolved = rawStatus.includes('resolve') || rawStatus.includes('closed');
+
+                // Notes Thread
+                const notesList = (Array.isArray(data.notes) && data.notes.length > 0)
+                    ? data.notes.map(n => `
+                        <div style="background: #1e293b; border-left: 3px solid #38bdf8; padding: 8px 12px; border-radius: 4px; margin-bottom: 8px;">
+                            <div style="color: #f1f5f9; font-size: 0.9rem;">${escapeHtml(n.message)}</div>
+                            ${n.createdAt ? `<div style="color: #64748b; font-size: 0.75rem; margin-top: 4px;">${new Date(n.createdAt).toLocaleString()}</div>` : ''}
+                        </div>
+                    `).join('')
+                    : '<p style="color: #64748b; font-size: 0.85rem; font-style: italic; margin-bottom: 8px;">No follow-up notes recorded yet.</p>';
+
                 trackResultBox.innerHTML = `
                     <div style="background-color: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 1.5rem;">
+                        ${staleBanner}
+
+                        <!-- Header -->
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #334155; padding-bottom: 10px;">
-                            <span style="font-weight: bold; color: #38bdf8; font-size: 1.1rem;">Case: ${code}</span>
-                            <span class="status-pill ${statusClass}">${data.status || 'Pending'}</span>
+                            <span style="font-weight: bold; color: #38bdf8; font-size: 1.15rem;">Case: ${escapeHtml(data.caseCode || code)}</span>
+                            <span class="status-pill ${statusClass}">${escapeHtml(data.status || 'Pending')}</span>
                         </div>
-                        <p style="margin-bottom: 8px;"><strong>Category:</strong> <span style="color: #cbd5e1;">${data.category || 'General'}</span></p>
-                        <p style="margin-bottom: 8px;"><strong>Description:</strong> <span style="color: #94a3b8;">${data.description || 'No description provided.'}</span></p>
-                        <p style="font-size: 0.85rem; color: #64748b; margin-top: 12px;">Last Updated: ${data.timestamp ? new Date(data.timestamp).toLocaleString() : 'Recent'}</p>
+
+                        <!-- Details -->
+                        <p style="margin-bottom: 8px;"><strong>Category:</strong> <span style="color: #cbd5e1; text-transform: capitalize;">${escapeHtml(data.category || 'General')}</span></p>
+                        <p style="margin-bottom: 8px;"><strong>Description:</strong> <span style="color: #94a3b8;">${escapeHtml(data.description || 'No description provided.')}</span></p>
+                        <p style="font-size: 0.82rem; color: #64748b; margin-top: 10px; margin-bottom: 14px;">
+                            Created: ${data.createdAt ? new Date(data.createdAt).toLocaleString() : 'Recent'}
+                        </p>
+
+                        <!-- Follow-up Notes Section -->
+                        <div style="margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #334155;">
+                            <h4 style="color: #38bdf8; font-size: 0.95rem; margin-bottom: 0.75rem;">Follow-up Notes & Updates</h4>
+                            <div id="notesContainer" style="margin-bottom: 1rem; max-height: 160px; overflow-y: auto;">
+                                ${notesList}
+                            </div>
+
+                            <div style="display: flex; gap: 8px;">
+                                <input type="text" id="newNoteInput" placeholder="Add a follow-up note to this case..." style="flex: 1; padding: 8px 12px; border-radius: 6px; border: 1px solid #334155; background: #1e293b; color: white; font-size: 0.9rem;">
+                                <button type="button" id="addNoteBtn" class="cta-btn" style="border: none; padding: 8px 16px; font-size: 0.85rem; cursor: pointer; white-space: nowrap;">Add Note</button>
+                            </div>
+                        </div>
+
+                        <!-- Action Controls (Resolve & Withdraw) -->
+                        <div style="margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
+                            <button type="button" id="resolveReportBtn" style="background-color: ${isResolved ? '#059669' : '#10b981'}; color: white; padding: 8px 16px; border: none; border-radius: 6px; cursor: ${isResolved ? 'default' : 'pointer'}; font-weight: 600; font-size: 0.85rem; opacity: ${isResolved ? '0.6' : '1'};" ${isResolved ? 'disabled' : ''}>
+                                ${isResolved ? '✓ Case Resolved' : 'Mark as Resolved'}
+                            </button>
+                            <button type="button" id="withdrawReportBtn" style="background-color: #ef4444; color: white; padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 0.85rem;">
+                                Withdraw Report
+                            </button>
+                        </div>
                     </div>
                 `;
+
+                const currentCaseCode = data.caseCode || code;
+
+                // A. Add Note
+                const addNoteBtn = document.getElementById('addNoteBtn');
+                const newNoteInput = document.getElementById('newNoteInput');
+                addNoteBtn.addEventListener('click', async () => {
+                    const message = newNoteInput.value.trim();
+                    if (!message) {
+                        alert('Please enter a note before submitting.');
+                        return;
+                    }
+
+                    addNoteBtn.disabled = true;
+                    addNoteBtn.innerText = 'Adding...';
+
+                    try {
+                        const noteRes = await fetch(`${API_BASE}/api/gym-reports/${encodeURIComponent(currentCaseCode)}/notes`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ message })
+                        });
+                        const noteData = await noteRes.json();
+
+                        if (!noteRes.ok) throw new Error(noteData.error || 'Failed to add note.');
+                        
+                        fetchAndRenderReport(currentCaseCode);
+                    } catch (err) {
+                        alert(err.message);
+                        addNoteBtn.disabled = false;
+                        addNoteBtn.innerText = 'Add Note';
+                    }
+                });
+
+                // B. Mark as Resolved
+                const resolveReportBtn = document.getElementById('resolveReportBtn');
+                if (!isResolved) {
+                    resolveReportBtn.addEventListener('click', async () => {
+                        const confirmed = confirm(`Are you sure you want to mark report ${currentCaseCode} as Resolved?`);
+                        if (!confirmed) return;
+
+                        resolveReportBtn.disabled = true;
+                        resolveReportBtn.innerText = 'Resolving...';
+
+                        try {
+                            const patchRes = await fetch(`${API_BASE}/api/gym-reports/${encodeURIComponent(currentCaseCode)}`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' }
+                            });
+                            const patchData = await patchRes.json();
+
+                            if (!patchRes.ok) throw new Error(patchData.error || 'Failed to resolve report.');
+
+                            fetchAndRenderReport(currentCaseCode);
+                        } catch (err) {
+                            alert(err.message);
+                            resolveReportBtn.disabled = false;
+                            resolveReportBtn.innerText = 'Mark as Resolved';
+                        }
+                    });
+                }
+
+                // C. Withdraw / Delete Report
+                const withdrawReportBtn = document.getElementById('withdrawReportBtn');
+                withdrawReportBtn.addEventListener('click', async () => {
+                    const confirmed = confirm(`Are you sure you want to withdraw report ${currentCaseCode}? This will permanently remove it from ShieldBox.`);
+                    if (!confirmed) return;
+
+                    withdrawReportBtn.disabled = true;
+                    withdrawReportBtn.innerText = 'Withdrawing...';
+
+                    try {
+                        const delRes = await fetch(`${API_BASE}/api/gym-reports/${encodeURIComponent(currentCaseCode)}`, {
+                            method: 'DELETE'
+                        });
+                        const delData = await delRes.json();
+
+                        if (!delRes.ok) throw new Error(delData.error || 'Failed to withdraw report.');
+
+                        trackResultBox.innerHTML = `
+                            <div class="report-banner success-banner">
+                                Report <strong>${escapeHtml(currentCaseCode)}</strong> was successfully withdrawn and removed.
+                            </div>
+                        `;
+                        trackCodeInput.value = '';
+                    } catch (err) {
+                        alert(err.message);
+                        withdrawReportBtn.disabled = false;
+                        withdrawReportBtn.innerText = 'Withdraw Report';
+                    }
+                });
+
             } catch (err) {
                 trackResultBox.style.display = 'block';
                 trackResultBox.innerHTML = `
@@ -248,6 +389,19 @@
                 trackBtn.disabled = false;
                 trackBtn.innerText = 'Query Status';
             }
+        }
+
+        trackBtn.addEventListener('click', () => {
+            const code = trackCodeInput.value.trim().toUpperCase();
+            if (!code) {
+                alert('Please enter a valid Case Code.');
+                return;
+            }
+            fetchAndRenderReport(code);
+        });
+
+        trackCodeInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') trackBtn.click();
         });
     </script>
 </body>

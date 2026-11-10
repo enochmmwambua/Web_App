@@ -58,6 +58,10 @@
     
 <!-- Signup Form Logic -->
     <script>
+        const API_BASE = window.location.port === '5500' || window.location.protocol === 'file:'
+            ? 'http://localhost:5000' 
+            : '';
+
         document.getElementById('signupForm').addEventListener('submit', async (e) => {
             e.preventDefault();
     
@@ -70,16 +74,19 @@
             };
 
             try {
-                const response = await fetch('/api/users', {
+                const response = await fetch(`${API_BASE}/api/users`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(userData)
+                    body: JSON.stringify({
+                        ...userData,
+                        // Ensure compatibility with backend validation schemas
+                        tier: userData.tier.toLowerCase()
+                    })
                 });
 
                 const data = await response.json();
 
                 if (response.ok) {
-                    // Auto-login session save
                     if (data.user) {
                         localStorage.setItem('gymUser', JSON.stringify(data.user));
                     }

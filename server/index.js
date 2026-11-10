@@ -1,3 +1,4 @@
+const { fetchWithRetry } = require('./resilientFetch');
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -5,9 +6,15 @@ const fs = require('fs');
 const YAML = require('yamljs');
 const swaggerUi = require('swagger-ui-express');
 const db = require('./db');
+const { monitor, statsHandler } = require('./monitoring');
 require('dotenv').config();
 
+
+// Middleware: Body Parsers & Static Files
 const app = express();
+
+// WEEK 12: REQUEST LOGGING (MUST BE REGISTERED FIRST)
+app.use(monitor);
 
 // Middleware: Body Parsers & Static Files
 app.use(cors());
@@ -34,9 +41,12 @@ if (yamlPath) {
 
 // WEEK 9: API SECURITY & RATE LIMITING
 
-const VALID_KEYS = (process.env.API_KEYS || '').split(',').map(k => k.trim()).filter(Boolean);
+const VALID_KEYS = (process.env.API_KEYS || '')
+    .split(',')
+    .map(k => k.trim())
+    .filter(Boolean);
 
-// 1. API Key Auth Middleware (Registered BEFORE protected routes)
+// 1. API Key Auth Middleware
 function requireApiKey(req, res, next) {
     // Exempt Swagger documentation, public health check, and internal frontend app APIs
     const isPublicOrInternal = 
@@ -44,8 +54,9 @@ function requireApiKey(req, res, next) {
         req.path === '/' ||
         req.path.startsWith('/api/workouts') ||
         req.path.startsWith('/api/login') ||
+        req.path.startsWith('/login') ||
         req.path.startsWith('/api/gym-reports') ||
-        req.path.match(/^\/api\/users\/\d+$/); // Profile read/update for logged-in members
+        req.path.match(/^\/api\/users\/\d+$/); 
 
     if (isPublicOrInternal) {
         return next();
@@ -65,8 +76,17 @@ function rateLimit({ windowMs, max }) {
     const hits = new Map();
 
     return (req, res, next) => {
-        // Exempt Swagger docs and root
-        if (req.path.startsWith('/docs') || req.path === '/') return next();
+        // Exempt Swagger docs, root, and internal frontend routes
+        const isExempt = 
+            req.path.startsWith('/docs') || 
+            req.path === '/' ||
+            req.path.startsWith('/api/login') ||
+            req.path.startsWith('/login') ||
+            req.path.startsWith('/api/workouts') ||
+            req.path.startsWith('/api/gym-reports') ||
+            req.path.match(/^\/api\/users\/\d+$/);
+
+        if (isExempt) return next();
 
         const id = req.apiKey || req.ip;
         const now = Date.now();
@@ -95,6 +115,7 @@ function rateLimit({ windowMs, max }) {
 app.use(requireApiKey);
 app.use(rateLimit({ windowMs: 60000, max: 100 }));
 
+app.get(['/stats', '/api/stats'], statsHandler);
 
 
 // WORKOUT TRACKER ENDPOINTS (index.html)
@@ -147,7 +168,6 @@ app.delete('/api/workouts/:id', async (req, res) => {
         res.status(500).json({ error: 'Failed to delete workout' });
     }
 });
-
 
 
 // SIGNUP & USER REGISTRATION
@@ -219,7 +239,6 @@ app.post(['/users', '/api/users'], async (req, res) => {
         res.status(500).json({ error: 'Failed to register user' });
     }
 });
-
 
 
 // AUTHENTICATION & PROFILE MANAGEMENT
@@ -329,24 +348,28 @@ app.put(['/users/:id', '/api/users/:id'], async (req, res) => {
 });
 
 
-
 // UPSTREAM INTEGRATION: Group 8 (ShieldBox)
 
 const SHIELDBOX_URL = process.env.SHIELDBOX_BASE_URL;
+const SHIELDBOX_KEY = process.env.SHIELDBOX_API_KEY;
 
-// POST /api/gym-reports
+// POST /api/gym-reports (Submit a new maintenance report to ShieldBox)
 app.post('/api/gym-reports', async (req, res) => {
     const { category, description } = req.body;
     if (!category || !description) {
         return res.status(400).json({ error: "Category and description are required." });
     }
 
+    if (!SHIELDBOX_URL || !SHIELDBOX_KEY) {
+        return res.status(502).json({ error: "ShieldBox service configuration missing in server environment." });
+    }
+
     try {
-        const response = await fetch(`${process.env.SHIELDBOX_BASE_URL}/reports`, {
+        const response = await fetch(`${SHIELDBOX_URL}/reports`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-API-Key': process.env.SHIELDBOX_API_KEY
+                'X-API-Key': SHIELDBOX_KEY
             },
             body: JSON.stringify({ category, description })
         });
@@ -362,34 +385,170 @@ app.post('/api/gym-reports', async (req, res) => {
     }
 });
 
-// GET /api/gym-reports/:caseCode
+const lastGoodReports = new Map(); // caseCode -> { data, asof }
+// GET /api/gym-reports/:caseCode (Retrieve a maintenance report by Case Code from ShieldBox)
 app.get('/api/gym-reports/:caseCode', async (req, res) => {
     const { caseCode } = req.params;
+    const upperCode = caseCode.toUpperCase();
+
+    if (!SHIELDBOX_URL || !SHIELDBOX_KEY) {
+        return res.status(502).json({ error: "ShieldBox service configuration missing in server environment." });
+    }
 
     try {
-        const response = await fetch(`${process.env.SHIELDBOX_BASE_URL}/reports/${encodeURIComponent(caseCode)}`, {
-            method: 'GET',
+        const response = await fetchWithRetry(
+            `${SHIELDBOX_URL}/reports/${encodeURIComponent(upperCode)}`,
+            {
+                method: 'GET',
+                headers: {
+                    'X-API-Key': SHIELDBOX_KEY,
+                    'Accept': 'application/json'
+                }
+            },
+            { timeoutMs: 1500, retries: 2, delayMs: 200 }
+        );
+
+        if (!response.ok) {
+            if (response.status === 404) {
+                return res.status(404).json({ error: "No report found matching that Case Code." });
+            }
+            throw new Error(`ShieldBox returned HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        const asof = new Date().toISOString();
+
+        // Save last known good copy in memory
+        lastGoodReports.set(upperCode, { data, asof });
+
+        return res.status(200).json({
+            ...data,
+            stale: false,
+            asof
+        });
+    } catch (err) {
+        const reason = err.name === 'TimeoutError' ? 'timeout' : (err.cause?.code || err.message);
+        console.error(`[SHIELDBOX GET FAILED] ${upperCode}: ${reason}`);
+
+        // Graceful Fallback: Serve cached report if available
+        if (lastGoodReports.has(upperCode)) {
+            const cached = lastGoodReports.get(upperCode);
+            return res.status(200).json({
+                ...cached.data,
+                stale: true,
+                asof: cached.asof
+            });
+        }
+
+        return res.status(502).json({ error: "Maintenance reporting service is temporarily offline." });
+    }
+});
+
+// POST /api/gym-reports/:caseCode/notes (Add a note to an existing maintenance report)
+app.post('/api/gym-reports/:caseCode/notes', async (req, res) => {
+    const { caseCode } = req.params;
+    const { message } = req.body;
+
+    if (!message || !message.trim()) {
+        return res.status(400).json({ error: "Note message is required." });
+    }
+
+    if (!SHIELDBOX_URL || !SHIELDBOX_KEY) {
+        return res.status(502).json({ error: "ShieldBox service configuration missing in server environment." });
+    }
+
+    try {
+        const response = await fetch(`${SHIELDBOX_URL}/reports/${encodeURIComponent(caseCode)}/notes`, {
+            method: 'POST',
             headers: {
-                'X-API-Key': process.env.SHIELDBOX_API_KEY,
+                'Content-Type': 'application/json',
+                'X-API-Key': SHIELDBOX_KEY
+            },
+            body: JSON.stringify({ message: message.trim() })
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+            return res.status(response.status).json({ error: data.message || data.error || "Failed to add note." });
+        }
+
+        res.status(201).json(data);
+    } catch (err) {
+        console.error('[SHIELDBOX NOTE POST FAILED]', err.cause?.code || err.message);
+        res.status(502).json({ error: "Maintenance reporting service is temporarily offline." });
+    }
+});
+
+// PATCH /api/gym-reports/:caseCode (Mark a maintenance report as resolved)
+app.patch('/api/gym-reports/:caseCode', async (req, res) => {
+    const { caseCode } = req.params;
+
+    if (!SHIELDBOX_URL || !SHIELDBOX_KEY) {
+        return res.status(502).json({ error: "ShieldBox service configuration missing in server environment." });
+    }
+
+    try {
+        const response = await fetch(`${SHIELDBOX_URL}/reports/${encodeURIComponent(caseCode)}`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-API-Key': SHIELDBOX_KEY
+            },
+            body: JSON.stringify({ status: "Resolved" })
+        });
+
+        const data = await response.json();
+        if (!response.ok) {
+            return res.status(response.status).json({ error: data.message || data.error || "Failed to resolve report." });
+        }
+
+        res.status(200).json(data);
+    } catch (err) {
+        console.error('[SHIELDBOX RESOLVE PATCH FAILED]', err.cause?.code || err.message);
+        res.status(502).json({ error: "Maintenance reporting service is temporarily offline." });
+    }
+});
+
+// DELETE /api/gym-reports/:caseCode (Withdraw a maintenance report from ShieldBox)
+app.delete('/api/gym-reports/:caseCode', async (req, res) => {
+    const { caseCode } = req.params;
+
+    if (!SHIELDBOX_URL || !SHIELDBOX_KEY) {
+        return res.status(502).json({ error: "ShieldBox service configuration missing in server environment." });
+    }
+
+    try {
+        const response = await fetch(`${SHIELDBOX_URL}/reports/${encodeURIComponent(caseCode)}`, {
+            method: 'DELETE',
+            headers: {
+                'X-API-Key': SHIELDBOX_KEY,
                 'Accept': 'application/json'
             }
         });
+
+        if (response.status === 204) {
+            return res.status(200).json({ 
+                success: true, 
+                message: `Report ${caseCode} was successfully withdrawn.` 
+            });
+        }
 
         const data = await response.json();
         if (!response.ok) {
             if (response.status === 404) {
                 return res.status(404).json({ error: data.error || "No report found matching that Case Code." });
             }
-            return res.status(response.status).json({ error: data.message || data.error || "ShieldBox error." });
+            return res.status(response.status).json({ error: data.message || data.error || "Failed to withdraw report." });
         }
+
         res.status(200).json(data);
     } catch (err) {
-        console.error('[SHIELDBOX GET FAILED]', err.cause?.code || err.message);
+        console.error('[SHIELDBOX DELETE FAILED]', err.cause?.code || err.message);
         res.status(502).json({ error: "Maintenance reporting service is temporarily offline." });
     }
 });
 
-// ==========================================
+
 // CONTRACT READ ENDPOINTS (Group 10 NyumbaHub)
 
 // GET /memberships: Return active gym membership tiers

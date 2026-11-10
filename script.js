@@ -1,5 +1,10 @@
+/* Dynamic API Base Detection */
+const API_BASE = window.location.port === '5500' || window.location.protocol === 'file:'
+    ? 'http://localhost:5000' 
+    : '';
+
 /* Workouts and Database Connection */
-let workoutsDB = []; // Will hold data fetched from Express
+let workoutsDB = []; 
 
 const jsDays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 let activeDay = jsDays[new Date().getDay()];
@@ -13,7 +18,7 @@ const workoutInput = document.getElementById("newWorkoutInput");
 // SELECT: Fetch data from database on load
 async function fetchWorkouts() {
     try {
-        const res = await fetch('http://localhost:5000/api/workouts');
+        const res = await fetch(`${API_BASE}/api/workouts`);
         workoutsDB = await res.json();
         render();
     } catch (err) {
@@ -22,14 +27,16 @@ async function fetchWorkouts() {
 }
 
 function init() {
-    uiDays.forEach(day => {
-        const btn = document.createElement("button");
-        btn.innerText = day.slice(0, 3);
-        btn.onclick = () => setDay(day);
-        if (day === activeDay) btn.classList.add("active");
-        daySelector.appendChild(btn);
-    });
-    fetchWorkouts(); // Replaces localStorage load
+    if (daySelector) {
+        uiDays.forEach(day => {
+            const btn = document.createElement("button");
+            btn.innerText = day.slice(0, 3);
+            btn.onclick = () => setDay(day);
+            if (day === activeDay) btn.classList.add("active");
+            daySelector.appendChild(btn);
+        });
+    }
+    fetchWorkouts();
 }
 
 function setDay(day) {
@@ -37,13 +44,14 @@ function setDay(day) {
     document.querySelectorAll('.day-selector button').forEach((btn, i) => {
         btn.classList.toggle("active", uiDays[i] === day);
     });
-    document.getElementById("currentDayTitle").innerText = day;
+    const title = document.getElementById("currentDayTitle");
+    if (title) title.innerText = day;
     render();
 }
 
 function render() {
+    if (!workoutList) return;
     workoutList.innerHTML = ""; 
-    // Filter the flat database array for the current day
     const todaysWorkouts = workoutsDB.filter(w => w.day === activeDay);
 
     todaysWorkouts.forEach((ex) => {
@@ -61,46 +69,47 @@ function render() {
     });
 }
 
-// UPDATE: Triggered when a checkbox is clicked
+// UPDATE: Toggle exercise completion
 window.toggleComplete = async (id, isCompleted) => {
     try {
-        await fetch(`http://localhost:5000/api/workouts/${id}`, {
+        await fetch(`${API_BASE}/api/workouts/${id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ is_completed: isCompleted })
         });
-        // Update local state so it matches the database
         const index = workoutsDB.findIndex(w => w.id === id);
-        if(index !== -1) workoutsDB[index].is_completed = isCompleted;
+        if (index !== -1) workoutsDB[index].is_completed = isCompleted;
     } catch (err) {
         console.error("Failed to update status", err);
     }
 };
 
-// INSERT: Add new exercise to DB
-addBtn.addEventListener('click', async () => {
-    const val = workoutInput.value.trim();
-    if (!val) return; 
-    
-    try {
-        const res = await fetch('http://localhost:5000/api/workouts', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ day: activeDay, exercise: val })
-        });
-        const newExercise = await res.json();
-        workoutsDB.push(newExercise); // Add to local array
-        workoutInput.value = ""; 
-        render();
-    } catch (err) {
-        console.error("Failed to save to DB", err);
-    }
-});
+// INSERT: Add exercise to DB
+if (addBtn) {
+    addBtn.addEventListener('click', async () => {
+        const val = workoutInput.value.trim();
+        if (!val) return; 
+        
+        try {
+            const res = await fetch(`${API_BASE}/api/workouts`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ day: activeDay, exercise: val })
+            });
+            const newExercise = await res.json();
+            workoutsDB.push(newExercise);
+            workoutInput.value = ""; 
+            render();
+        } catch (err) {
+            console.error("Failed to save to DB", err);
+        }
+    });
+}
 
 // DELETE: Remove exercise from DB
 window.removeEx = async (id) => {
     try {
-        await fetch(`http://localhost:5000/api/workouts/${id}`, { method: 'DELETE' });
+        await fetch(`${API_BASE}/api/workouts/${id}`, { method: 'DELETE' });
         workoutsDB = workoutsDB.filter(w => w.id !== id);
         render();
     } catch (err) {
@@ -109,95 +118,83 @@ window.removeEx = async (id) => {
 };
 
 /* BARBELL CALCULATOR */
-document.getElementById('calcBtn').addEventListener('click', () => {
-    const input = document.getElementById('targetWeight').value;
-    const display = document.getElementById('plateDisplay');
-    const feedback = document.getElementById('textFeedback');
-    
-    display.innerHTML = ""; 
-    
-    const weight = parseFloat(input);
-    const bar = 20; 
+const calcBtn = document.getElementById('calcBtn');
+if (calcBtn) {
+    calcBtn.addEventListener('click', () => {
+        const input = document.getElementById('targetWeight').value;
+        const display = document.getElementById('plateDisplay');
+        const feedback = document.getElementById('textFeedback');
+        
+        display.innerHTML = ""; 
+        const weight = parseFloat(input);
+        const bar = 20; 
 
-    if (isNaN(weight) || weight < bar) {
-        feedback.innerText = "The bar weighs 20kg. Enter a weight higher than that.";
-        return;
-    }
-    if (weight > 500) {
-        feedback.innerText = "Max limit is 500kg. Please enter a lower weight.";
-        return;
-    }
-    if ((weight - bar) % 5 !== 0) {
-        feedback.innerText = "Weight must be divisible by 2.5kg or 5kg increments.";
-        return;
-    }
+        if (isNaN(weight) || weight < bar) {
+            feedback.innerText = "The bar weighs 20kg. Enter a weight higher than that.";
+            return;
+        }
+        if (weight > 500) {
+            feedback.innerText = "Max limit is 500kg. Please enter a lower weight.";
+            return;
+        }
+        if ((weight - bar) % 5 !== 0) {
+            feedback.innerText = "Weight must be divisible by 2.5kg or 5kg increments.";
+            return;
+        }
 
-    let perSide = (weight - bar) / 2;
-    feedback.innerText = `Load ${perSide}kg per side`;
+        let perSide = (weight - bar) / 2;
+        feedback.innerText = `Load ${perSide}kg per side`;
 
-    const plates = [25, 20, 10, 5, 2.5];
-    
-    plates.forEach(p => {
-        while (perSide >= p) {
-            const div = document.createElement('div');
-            const cName = p === 2.5 ? 'plate-2\\.5' : `plate-${p}`;
-            div.className = `plate ${cName}`;
-            div.innerText = p;
-            
-            display.appendChild(div);
-            perSide -= p;
+        const plates = [25, 20, 10, 5, 2.5];
+        
+        plates.forEach(p => {
+            while (perSide >= p) {
+                const div = document.createElement('div');
+                const cName = p === 2.5 ? 'plate-2\\.5' : `plate-${p}`;
+                div.className = `plate ${cName}`;
+                div.innerText = p;
+                
+                display.appendChild(div);
+                perSide -= p;
+            }
+        });
+
+        if (display.children.length === 0 && weight > bar) {
+            feedback.innerText = "Empty bar.";
         }
     });
-
-    if (display.children.length === 0 && weight > bar) {
-        feedback.innerText = "Empty bar.";
-    }
-});
+}
 
 /* CAROUSEL */
 const track = document.querySelector('.carousel-track');
-const slides = Array.from(track.children);
-const nextButton = document.querySelector('.next-btn');
-const prevButton = document.querySelector('.prev-btn');
+if (track) {
+    const slides = Array.from(track.children);
+    const nextButton = document.querySelector('.next-btn');
+    const prevButton = document.querySelector('.prev-btn');
+    let currentSlideIndex = 0;
 
-let currentSlideIndex = 0;
+    function moveToSlide(index) {
+        if (index < 0) index = slides.length - 1;
+        if (index >= slides.length) index = 0;
+        
+        currentSlideIndex = index;
+        const slideWidth = slides[0].getBoundingClientRect().width;
+        track.style.transform = `translateX(-${slideWidth * currentSlideIndex}px)`;
+    }
 
-function moveToSlide(index) {
-    if (index < 0) index = slides.length - 1;
-    if (index >= slides.length) index = 0;
-    
-    currentSlideIndex = index;
-    const slideWidth = slides[0].getBoundingClientRect().width;
-    track.style.transform = `translateX(-${slideWidth * currentSlideIndex}px)`;
+    if (nextButton) nextButton.addEventListener('click', () => moveToSlide(currentSlideIndex + 1));
+    if (prevButton) prevButton.addEventListener('click', () => moveToSlide(currentSlideIndex - 1));
+
+    setInterval(() => {
+        moveToSlide(currentSlideIndex + 1);
+    }, 6000);
+
+    window.addEventListener('resize', () => {
+        moveToSlide(currentSlideIndex);
+    });
 }
 
-nextButton.addEventListener('click', () => moveToSlide(currentSlideIndex + 1));
-prevButton.addEventListener('click', () => moveToSlide(currentSlideIndex - 1));
-
-setInterval(() => {
-    moveToSlide(currentSlideIndex + 1);
-}, 6000);
-
-window.addEventListener('resize', () => {
-    moveToSlide(currentSlideIndex);
-});
-
-// Display active member in navbar if logged in
-document.addEventListener('DOMContentLoaded', () => {
-    const sessionUser = JSON.parse(localStorage.getItem('gymUser'));
-    const authSlot = document.getElementById('navAuthSlot');
-
-    if (sessionUser && sessionUser.fullName && authSlot) {
-        authSlot.innerHTML = `
-            <a href="profile.html" style="color: #38bdf8; font-weight: bold; margin-left: 15px;">
-                👤 ${sessionUser.fullName.split(' ')[0]}
-            </a>
-            <a href="profile.html" class="outline-btn" style="padding: 6px 14px; font-size: 0.85rem; margin-left: 10px;">Account</a>
-        `;
-    }
-});
-
-// Check active login state and update the homepage header
+/* NAVBAR AUTHENTICATION SLOT */
 document.addEventListener('DOMContentLoaded', () => {
     const sessionUser = JSON.parse(localStorage.getItem('gymUser'));
     const authSlot = document.getElementById('navAuthSlot');
@@ -224,5 +221,5 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// Innitiaslization
+// Initialize GymBuddy App
 init();
