@@ -1,3 +1,5 @@
+const v1 = require('./v1');
+const v2 = require('./v2');
 const { fetchWithRetry } = require('./resilientFetch');
 const express = require('express');
 const cors = require('cors');
@@ -113,7 +115,12 @@ function rateLimit({ windowMs, max }) {
 
 // Register security middleware (100 requests per minute)
 app.use(requireApiKey);
-app.use(rateLimit({ windowMs: 60000, max: 100 }));
+app.use(rateLimit({ windowMs: 60000, max: 2 }));
+
+// WEEK 13: VERSIONED ROUTER MOUNTS
+app.use('/v2', v2);
+app.use('/v1', v1);
+app.use('/', v1); // Unversioned fallback so /memberships still works for legacy callers
 
 app.get(['/stats', '/api/stats'], statsHandler);
 
@@ -551,6 +558,7 @@ app.delete('/api/gym-reports/:caseCode', async (req, res) => {
 
 // CONTRACT READ ENDPOINTS (Group 10 NyumbaHub)
 
+/*
 // GET /memberships: Return active gym membership tiers
 app.get(['/memberships', '/api/memberships'], (req, res) => {
     res.status(200).json([
@@ -567,7 +575,7 @@ app.get(['/trainers', '/api/trainers'], (req, res) => {
         { name: 'Coach Sarah', specialty: 'HIIT & Conditioning' },
         { name: 'Coach David', specialty: 'Hypertrophy & Aesthetics' }
     ]);
-});
+}); 
 
 // GET /testimonials: Return verified member success stories
 app.get(['/testimonials', '/api/testimonials'], (req, res) => {
@@ -599,7 +607,7 @@ app.get(['/hours', '/api/hours'], (req, res) => {
     } else {
         res.status(200).json({ schedule: hours });
     }
-});
+}); */
 
 // Root check
 app.get('/', (req, res) => {
