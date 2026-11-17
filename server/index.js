@@ -115,7 +115,7 @@ function rateLimit({ windowMs, max }) {
 
 // Register security middleware (100 requests per minute)
 app.use(requireApiKey);
-app.use(rateLimit({ windowMs: 60000, max: 2 }));
+app.use(rateLimit({ windowMs: 60000, max: 100 }));
 
 // WEEK 13: VERSIONED ROUTER MOUNTS
 app.use('/v2', v2);
