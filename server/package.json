@@ -1,27 +1,9 @@
 {
-  "name": "server",
+  "name": "gymbuddy-root",
   "version": "1.0.0",
-  "description": "GymBuddy is a proprietary web application designed for Evolve Fitness Langata. It serves as a digital companion for premium facility members, allowing them to track their daily workout splits, manage specific exercises, and calculate precise barbell loads on the fly. It is built to replace physical notebooks for serious lifters.  It is also a hub where members of the gym can access and edit their account information and membership details. Members can also view available classes and apply for them or set up one on ones with instructors.",
-  "main": "index.js",
+  "private": true,
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "dependencies": {
-    "cors": "^2.8.6",
-    "dotenv": "^17.4.2",
-    "express": "^5.2.1",
-    "mysql2": "^3.24.4",
-    "swagger-ui-express": "^5.0.1",
-    "yamljs": "^0.3.0"
-  },
-  "devDependencies": {
-    "jest": "^30.5.2",
-    "nodemon": "^3.1.14",
-    "supertest": "^7.3.2"
+    "postinstall": "npm install --prefix server",
+    "start": "npm start --prefix server"
   }
 }
