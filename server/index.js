@@ -14,6 +14,7 @@ require('dotenv').config();
 
 // Middleware: Body Parsers & Static Files
 const app = express();
+app.set('trust proxy', 1);
 
 // WEEK 12: REQUEST LOGGING (MUST BE REGISTERED FIRST)
 app.use(monitor);
@@ -58,7 +59,8 @@ function requireApiKey(req, res, next) {
         req.path.startsWith('/api/login') ||
         req.path.startsWith('/login') ||
         req.path.startsWith('/api/gym-reports') ||
-        req.path.match(/^\/api\/users\/\d+$/); 
+        (req.path === '/api/users' && req.method === 'POST') ||
+        req.path.match(/^\/api\/users\/\d+$/);
 
     if (isPublicOrInternal) {
         return next();
